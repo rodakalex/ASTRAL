@@ -7,8 +7,7 @@ from sqlalchemy import create_engine, Column, String, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Настройка базы данных
-DATABASE_URL = "sqlite:///packets.db"  # Замените на вашу базу данных
+DATABASE_URL = "sqlite:///packets.db"
 Base = declarative_base()
 
 class Packet(Base):
@@ -22,32 +21,24 @@ class Packet(Base):
     destination_port = Column(Integer)
     payload = Column(String)
 
-# Создание базы данных и таблиц
 engine = create_engine(DATABASE_URL)
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 
 sniffing = True
 
 def packet_handler(packet):
     if packet.haslayer(IP):
         ip_layer = packet[IP]
-        logging.info(f"Source IP: {ip_layer.src}, Destination IP: {ip_layer.dst}, Protocol: {ip_layer.proto}")
-        
         if packet.haslayer(TCP):
             tcp_layer = packet[TCP]
-            logging.info(f"Captured packet: {packet.summary()}")
-            logging.info(f"Source Port: {tcp_layer.sport}, Destination Port: {tcp_layer.dport}, Flags: {tcp_layer.flags}")
-
             payload = None
             if Raw in packet:
                 payload = packet[Raw].load
-                logging.info(f"Payload: {payload}")
-
-            # Сохранение данных в базу
+            logging.info(f"Packet: {ip_layer.src}:{tcp_layer.sport} -> {ip_layer.dst}:{tcp_layer.dport}, Protocol: {ip_layer.proto}")
             save_packet(ip_layer.src, ip_layer.dst, ip_layer.proto, tcp_layer.sport, tcp_layer.dport, payload)
 
 def save_packet(source_ip, destination_ip, protocol, source_port, destination_port, payload):
@@ -61,19 +52,18 @@ def save_packet(source_ip, destination_ip, protocol, source_port, destination_po
     )
     session.add(packet)
     session.commit()
-    logging.info("Packet saved to database.")
 
 def start_sniffing(interface="eth0", filter="ip"):
     global sniffing
     try:
-        logging.info(f"Starting packet sniffing on interface: {interface} with filter: {filter}")
+        logging.warning(f"Starting packet sniffing on interface: {interface} with filter: {filter}")
         sniff(iface=interface, prn=packet_handler, filter=filter, stop_filter=lambda x: not sniffing)
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 
 def signal_handler(sig, frame):
     global sniffing
-    logging.info("Stopping packet sniffing...")
+    logging.warning("Stopping packet sniffing...")
     sniffing = False
     session.close()  # Закрываем сессию перед выходом
     sys.exit(0)
