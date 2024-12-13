@@ -7,8 +7,8 @@ from sqlalchemy import create_engine, Column, String, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Настройка базы данных
-DATABASE_URL = "sqlite:///packets.db"  # Замените на вашу базу данных
+
+DATABASE_URL = "sqlite:///packets.db" 
 Base = declarative_base()
 
 class Packet(Base):
@@ -22,7 +22,7 @@ class Packet(Base):
     destination_port = Column(Integer)
     payload = Column(String)
 
-# Создание базы данных и таблиц
+
 engine = create_engine(DATABASE_URL)
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
@@ -47,8 +47,8 @@ def packet_handler(packet):
                 payload = packet[Raw].load
                 logging.info(f"Payload: {payload}")
 
-            # Сохранение данных в базу
             save_packet(ip_layer.src, ip_layer.dst, ip_layer.proto, tcp_layer.sport, tcp_layer.dport, payload)
+
 
 def save_packet(source_ip, destination_ip, protocol, source_port, destination_port, payload):
     packet = Packet(
@@ -63,6 +63,7 @@ def save_packet(source_ip, destination_ip, protocol, source_port, destination_po
     session.commit()
     logging.info("Packet saved to database.")
 
+
 def start_sniffing(interface="eth0", filter="ip"):
     global sniffing
     try:
@@ -71,12 +72,14 @@ def start_sniffing(interface="eth0", filter="ip"):
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 
+
 def signal_handler(sig, frame):
     global sniffing
     logging.info("Stopping packet sniffing...")
     sniffing = False
-    session.close()  # Закрываем сессию перед выходом
+    session.close() 
     sys.exit(0)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Packet Sniffer")
